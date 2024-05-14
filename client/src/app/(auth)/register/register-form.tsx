@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -21,11 +21,11 @@ import {
 } from "~/schemaValidations/auth.schema";
 import authApiRequest from "~/apiRequests/auth";
 import { useToast } from "~/components/ui/use-toast";
-import { useRouter } from "next/navigation";
+import { handleErrorApi } from "~/lib/utils";
 
 const RegisterForm = () => {
   const { toast } = useToast();
-  const router = useRouter();
+  const [loading, setLoading] = useState<boolean>(false)
 
   const form = useForm<RegisterBodyType>({
     resolver: zodResolver(RegisterBody),
@@ -38,6 +38,8 @@ const RegisterForm = () => {
   });
 
   async function onSubmit(values: RegisterBodyType) {
+    if(loading) return;
+    setLoading(true)
     try {
       const result = await authApiRequest.register(values);
 
@@ -47,27 +49,9 @@ const RegisterForm = () => {
         description: result.payload.message,
       });
     } catch (error: any) {
-      const errors = error.payload.errors as {
-        field: string;
-        message: string;
-      }[];
-
-      const status = error.status as number;
-
-      if (status === 422) {
-        errors.forEach((err) => {
-          form.setError(err.field as "email" | "password", {
-            type: "server",
-            message: err.message,
-          });
-        });
-      } else {
-        toast({
-          title: "Lỗi",
-          description: error?.payload?.message ?? "Lỗi không xác định",
-          variant: "destructive",
-        });
-      }
+      handleErrorApi({error, setError: form.setError})
+    } finally {
+      setLoading(false)
     }
   }
 
