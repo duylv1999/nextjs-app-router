@@ -1,4 +1,5 @@
 import envConfig from "~/config";
+import { normalizePath } from "~/lib/utils";
 import { LoginResType } from "~/schemaValidations/auth.schema";
 
 type CustomOptions = Omit<RequestInit, "method"> & {
@@ -8,12 +9,12 @@ type CustomOptions = Omit<RequestInit, "method"> & {
 const ENTITY_ERROR_STATUS = 422;
 
 type EntityErrorPayload = {
-  message: string
+  message: string;
   errors: {
-    field: string,
-    message: string,
-  }[]
-}
+    field: string;
+    message: string;
+  }[];
+};
 
 export class HttpError extends Error {
   status: number;
@@ -28,11 +29,17 @@ export class HttpError extends Error {
 }
 
 export class EntityError extends HttpError {
-  status: 422
+  status: 422;
   payload: EntityErrorPayload;
 
-  constructor({status, payload}: {status: 422, payload: EntityErrorPayload}) {
-    super({status, payload});
+  constructor({
+    status,
+    payload,
+  }: {
+    status: 422;
+    payload: EntityErrorPayload;
+  }) {
+    super({ status, payload });
     this.status = status;
     this.payload = payload;
   }
@@ -97,20 +104,28 @@ const request = async <Response>(
   };
 
   if (!res.ok) {
-    if(res.status === ENTITY_ERROR_STATUS) {
-      throw new EntityError(data as {
-        status: 422;
-        payload: EntityErrorPayload;
-      })
+    if (res.status === ENTITY_ERROR_STATUS) {
+      throw new EntityError(
+        data as {
+          status: 422;
+          payload: EntityErrorPayload;
+        }
+      );
     } else {
-      throw new HttpError(data)
+      throw new HttpError(data);
     }
   }
 
-  if (["/auth/login", "/auth/register"].includes(url)) {
-    clientSessionToken.value = (payload as LoginResType).data.token;
-  } else if ("/auth/logout".includes(url)) {
-    clientSessionToken.value = "";
+  if (typeof window !== undefined) {
+    if (
+      ["auth/login", "auth/register"].some(
+        (item) => item === normalizePath(url)
+      )
+    ) {
+      clientSessionToken.value = (payload as LoginResType).data.token;
+    } else if ("auth/logout" === normalizePath(url)) {
+      clientSessionToken.value = "";
+    }
   }
 
   return data;

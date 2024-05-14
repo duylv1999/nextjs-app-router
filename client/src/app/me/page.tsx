@@ -7,7 +7,5 @@ export default async function MeProfile() {
 
   const result = await accountApiRequest.me(sessionToken?.value ?? "");
 
-  console.log(result);
-
   return <div>Hello {result.payload.data.name}</div>;
 }
