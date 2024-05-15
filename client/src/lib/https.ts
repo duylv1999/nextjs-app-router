@@ -7,6 +7,7 @@ type CustomOptions = Omit<RequestInit, "method"> & {
 };
 
 const ENTITY_ERROR_STATUS = 422;
+const AUTHENTICATION_ERROR_STATUS = 401
 
 type EntityErrorPayload = {
   message: string;
@@ -63,6 +64,7 @@ class SessionToken {
 
 export const clientSessionToken = new SessionToken();
 
+let clientLogoutRequest : null | Promise<any>;
 const request = async <Response>(
   method: "GET" | "POST" | "PUT" | "DELETE",
   url: string,
@@ -111,12 +113,29 @@ const request = async <Response>(
           payload: EntityErrorPayload;
         }
       );
+    } else if(res.status === AUTHENTICATION_ERROR_STATUS){
+      if (typeof window !== 'undefined') {
+        if(!clientLogoutRequest) {
+          clientLogoutRequest = fetch('/api/auth/logout', {
+            method: 'POST',
+            body: JSON.stringify({force: true}),
+            headers: {
+              ...baseHeader
+            }
+          })
+          await clientLogoutRequest;
+          clientSessionToken.value = '';
+          location.href = '/login'
+        }
+      }
     } else {
       throw new HttpError(data);
     }
+
+    
   }
 
-  if (typeof window !== undefined) {
+  if (typeof window !== 'undefined') {
     if (
       ["auth/login", "auth/register"].some(
         (item) => item === normalizePath(url)
