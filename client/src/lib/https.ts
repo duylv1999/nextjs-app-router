@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import envConfig from "~/config";
 import { normalizePath } from "~/lib/utils";
 import { LoginResType } from "~/schemaValidations/auth.schema";
@@ -127,6 +128,10 @@ const request = async <Response>(
           clientSessionToken.value = '';
           location.href = '/login'
         }
+      } else {
+        const sessionToken = (options?.headers as any).Authorization.split(' ')[1]
+
+        redirect(`/logout?sessionToken=${sessionToken}`)
       }
     } else {
       throw new HttpError(data);

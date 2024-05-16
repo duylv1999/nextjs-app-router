@@ -9,7 +9,7 @@ export const ButtonLogout = () => {
     const route = useRouter()
     const handleLogout = async() => {
         try {
-            await authApiRequest.logoutFromClientToServer()
+            await authApiRequest.logoutFromClientToNextServer()
             route.push('/login')
         } catch (error) {
             handleErrorApi({error})
