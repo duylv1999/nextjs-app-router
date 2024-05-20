@@ -4,7 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "~/components/theme-provider";
 import Header from "~/app/components/header";
 import { Toaster } from "~/components/ui/toaster";
-import AppProvider from "~/app/AppProvider";
+import AppProvider from "~/app/app-provide";
 import { cookies } from "next/headers";
 
 const inter = Inter({ subsets: ["latin"] });

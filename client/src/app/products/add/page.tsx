@@ -1,16 +1,15 @@
 import { cookies } from "next/headers";
 import accountApiRequest from "~/apiRequests/account";
-import Profile from "./profile";
+import ProductAddForm from "./product-add-form";
 
-export default async function MeProfile() {
+export default async function AddProduct() {
   const cookieStore = cookies();
   const sessionToken = cookieStore.get("sessionToken");
 
   const result = await accountApiRequest.me(sessionToken?.value ?? "");
 
-  return <div>
-      Hello 
-      {result?.payload.data.name}
-      <Profile profile={result.payload.data} />
+  return <div className="flex flex-col items-center">
+      <h1>Add Product</h1> 
+      <ProductAddForm />
     </div>;
 }
