@@ -23,7 +23,7 @@ import { handleErrorApi } from "~/lib/utils";
 const LoginForm = () => {
   const { toast } = useToast();
   const router = useRouter();
-  const [loading, setLoading] = useState<boolean>(false)
+  const [loading, setLoading] = useState<boolean>(false);
 
   const form = useForm<LoginBodyType>({
     resolver: zodResolver(LoginBody),
@@ -34,24 +34,26 @@ const LoginForm = () => {
   });
 
   async function onSubmit(values: LoginBodyType) {
-    if(loading) return;
-    setLoading(true)
+    if (loading) return;
+    setLoading(true);
 
     try {
       const result = await authApiRequest.login(values);
 
-      await authApiRequest.auth({ sessionToken: result.payload.data.token });
+      await authApiRequest.auth({
+        sessionToken: result.payload.data.token,
+        expiresAt: result.payload.data.expiresAt,
+      });
 
       toast({
         description: result.payload.message,
       });
 
       router.push("/me");
-      // router.refresh()
     } catch (error: any) {
-      handleErrorApi({error, setError: form.setError})
+      handleErrorApi({ error, setError: form.setError });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 

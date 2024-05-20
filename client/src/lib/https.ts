@@ -8,7 +8,7 @@ type CustomOptions = Omit<RequestInit, "method"> & {
 };
 
 const ENTITY_ERROR_STATUS = 422;
-const AUTHENTICATION_ERROR_STATUS = 401
+const AUTHENTICATION_ERROR_STATUS = 401;
 
 type EntityErrorPayload = {
   message: string;
@@ -49,6 +49,7 @@ export class EntityError extends HttpError {
 
 class SessionToken {
   private token = "";
+  private _expiresAt = new Date().toUTCString();
 
   get value() {
     return this.token;
@@ -61,11 +62,23 @@ class SessionToken {
 
     this.token = token;
   }
+
+  get expiresAt() {
+    return this._expiresAt;
+  }
+
+  set expiresAt(expiresAt: string) {
+    if (typeof window === "undefined") {
+      throw new Error("Cannot set token on server side");
+    }
+
+    this._expiresAt = expiresAt;
+  }
 }
 
 export const clientSessionToken = new SessionToken();
 
-let clientLogoutRequest : null | Promise<any>;
+let clientLogoutRequest: null | Promise<any>;
 const request = async <Response>(
   method: "GET" | "POST" | "PUT" | "DELETE",
   url: string,
@@ -114,41 +127,45 @@ const request = async <Response>(
           payload: EntityErrorPayload;
         }
       );
-    } else if(res.status === AUTHENTICATION_ERROR_STATUS){
-      if (typeof window !== 'undefined') {
-        if(!clientLogoutRequest) {
-          clientLogoutRequest = fetch('/api/auth/logout', {
-            method: 'POST',
-            body: JSON.stringify({force: true}),
+    } else if (res.status === AUTHENTICATION_ERROR_STATUS) {
+      if (typeof window !== "undefined") {
+        if (!clientLogoutRequest) {
+          clientLogoutRequest = fetch("/api/auth/logout", {
+            method: "POST",
+            body: JSON.stringify({ force: true }),
             headers: {
-              ...baseHeader
-            }
-          })
+              ...baseHeader,
+            },
+          });
+
           await clientLogoutRequest;
-          clientSessionToken.value = '';
-          location.href = '/login'
+          clientSessionToken.value = "";
+          clientSessionToken.expiresAt = new Date().toISOString();
+          location.href = "/login";
         }
       } else {
-        const sessionToken = (options?.headers as any).Authorization.split(' ')[1]
+        const sessionToken = (options?.headers as any).Authorization.split(
+          " "
+        )[1];
 
-        redirect(`/logout?sessionToken=${sessionToken}`)
+        redirect(`/logout?sessionToken=${sessionToken}`);
       }
     } else {
       throw new HttpError(data);
     }
-
-    
   }
 
-  if (typeof window !== 'undefined') {
+  if (typeof window !== "undefined") {
     if (
       ["auth/login", "auth/register"].some(
         (item) => item === normalizePath(url)
       )
     ) {
       clientSessionToken.value = (payload as LoginResType).data.token;
+      clientSessionToken.expiresAt = (payload as LoginResType).data.expiresAt;
     } else if ("auth/logout" === normalizePath(url)) {
       clientSessionToken.value = "";
+      clientSessionToken.expiresAt = new Date().toISOString();
     }
   }
 

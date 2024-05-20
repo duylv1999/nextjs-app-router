@@ -3,27 +3,9 @@ import authApiRequest from "~/apiRequests/auth";
 import { HttpError } from "~/lib/https";
 
 export async function POST(request: Request) {
-  const res = await request.json();
-  const force = res.force as boolean | undefined;
-
-  if (force) {
-    return Response.json(
-      {
-        message: "Buộc logout thành công",
-      },
-      {
-        status: 200,
-        headers: {
-          // Xóa cookie sessionToken
-          "Set-Cookie": `sessionToken=; Path=/; HttpOnly; Max-Age=0`,
-        },
-      }
-    );
-  }
-
   const cookieStore = cookies();
   const sessionToken = cookieStore.get("sessionToken");
-  //   const expiresAt = body.expiresAt as string;
+
   if (!sessionToken) {
     return Response.json(
       { message: "Không nhận được session token" },
@@ -34,14 +16,16 @@ export async function POST(request: Request) {
   }
 
   try {
-    const result = await authApiRequest.logoutFromNextServerToServer(
+    const res = await authApiRequest.slideSessionFromNextServerToServer(
       sessionToken.value
     );
-    return Response.json(result.payload, {
+
+    const newExpiresDate = new Date(res.payload.data.expiresAt).toUTCString();
+
+    return Response.json(res.payload, {
       status: 200,
       headers: {
-        // Xóa cookie sessionToken
-        "Set-Cookie": `sessionToken=; Path=/; HttpOnly; Max-Age=0`,
+        "Set-Cookie": `sessionToken=${sessionToken.value}; Path=/; HttpOnly; Expires=${newExpiresDate}; SameSite=Lax;`,
       },
     });
   } catch (error) {
