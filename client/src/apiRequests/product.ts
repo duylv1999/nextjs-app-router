@@ -6,7 +6,13 @@ const productApiRequest = {
     create: (body : CreateProductBodyType) => 
         http.post<ProductResType>('/products', 
             body
-        )
+        ),
+    uploadImage: (body: FormData) => 
+        http.post<{
+            message: string,
+            data: string
+        }>('/media/upload', body)
+    
     
 };
 

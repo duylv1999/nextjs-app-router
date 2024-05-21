@@ -1,7 +1,7 @@
 'use client'
 
 import { handleErrorApi } from '~/lib/utils'
-import {  useState } from 'react'
+import {  useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useToast } from '~/components/ui/use-toast'
 import { useRouter } from 'next/navigation'
@@ -20,12 +20,15 @@ import { Input } from '~/components/ui/input'
 import { CreateProductBody, CreateProductBodyType } from '~/schemaValidations/product.schema'
 import productApiRequest from '~/apiRequests/product'
 import { Textarea } from '~/components/ui/textarea'
+import Image from 'next/image'
 
 export default function ProductAddForm() {
 
   const { toast } = useToast();
   const router = useRouter();
   const [loading, setLoading] = useState<boolean>(false)
+  const [file, setFile] = useState<File | null>()
+  const inputImageRef = useRef<HTMLInputElement | null>(null)
 
   const form = useForm<CreateProductBodyType>({
     resolver: zodResolver(CreateProductBody),
@@ -42,7 +45,16 @@ export default function ProductAddForm() {
     setLoading(true)
 
     try {
-      const result = await productApiRequest.create(values);
+      const formData = new FormData();
+      formData.append('file', file as Blob)
+
+      const resultImageUrl = await productApiRequest.uploadImage(formData);
+
+      const imageUrl = resultImageUrl.payload.data
+      const result = await productApiRequest.create({
+        ...values,
+        image: imageUrl
+      });
 
       toast({
         description: result.payload.message,
@@ -55,11 +67,11 @@ export default function ProductAddForm() {
       setLoading(false)
     }
   }
-  
+
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(onSubmit)}
+        onSubmit={form.handleSubmit(onSubmit, err => console.log(err))}
         className="space-y-8 max-w-[60%] w-full"
       >
         <FormField
@@ -111,13 +123,42 @@ export default function ProductAddForm() {
             <FormItem>
               <FormLabel>Image</FormLabel>
               <FormControl>
-                <Input type="file" accept='image/*'  />
+                <Input type="file" accept='image/*'
+                ref={inputImageRef}
+                onClick={(e: any) => e.target.value = null}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if(file) {
+                    setFile(file)
+                    field.onChange('http://localhost:3000/' + file.name)
+                  }
+                }} 
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
+        {file && (
+          <div>
+            <Image 
+               src={URL.createObjectURL(file)}
+               width={128}
+               height={128}
+               alt="preview"
+               className='w-32 h-32 object-cover'
+            />
+            <Button type="button" variant={'destructive'} size={'sm'} onClick={
+              () => {
+                setFile(null)
+                form.setValue('image', '')
+                if(inputImageRef.current) {
+                  inputImageRef.current.value = ''
+                }
+              }
+            }>Delete image</Button>
+          </div>
+        )}
         <Button className="!mt-8 w-full" type="submit">
           Submit
         </Button>
